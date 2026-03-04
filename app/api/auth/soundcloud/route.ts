@@ -6,17 +6,16 @@ export async function GET() {
 
   if (!clientId || !redirectUri) {
     return NextResponse.json(
-      { error: "Missing SoundCloud environment variables" },
+      { error: "OAuth environment variables missing" },
       { status: 500 }
     );
   }
 
-  const soundcloudAuthUrl =
-    `https://soundcloud.com/connect` +
-    `?client_id=${clientId}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&response_type=code` +
-    `&scope=non-expiring`;
+  const url = new URL("https://soundcloud.com/connect");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("redirect_uri", redirectUri);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("scope", "non-expiring");
 
-  return NextResponse.redirect(soundcloudAuthUrl);
+  return NextResponse.redirect(url.toString());
 }
