@@ -9,8 +9,12 @@ interface UserData {
   user_id?: string;
   tier?: string;
   followers_count?: number;
+  following_count?: number;
   track_count?: number;
+  playlist_count?: number;
+  likes_count?: number;
   avatar_url?: string;
+  profile_url?: string;
 }
 
 export default function Dashboard() {
@@ -40,74 +44,108 @@ export default function Dashboard() {
   }
 
   if (loading) {
-    return <div style={styles.container}>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center gap-3 text-muted">
+          <div className="w-5 h-5 border-2 border-muted border-t-accent rounded-full animate-spin" />
+          Loading your profile...
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
     return (
-      <div style={styles.container}>
-        <h1>Not authenticated</h1>
-        <a href="/api/auth/soundcloud" style={styles.link}>Connect SoundCloud</a>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-muted">Not authenticated</p>
+        <a
+          href="/api/auth/soundcloud"
+          className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm transition-colors"
+        >
+          Connect SoundCloud
+        </a>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1>Welcome, {user.display_name || user.username}</h1>
-        <button onClick={handleLogout} style={styles.logoutBtn}>
-          Sign out
-        </button>
-      </div>
+    <div className="min-h-screen">
+      {/* Nav */}
+      <nav className="border-b border-border px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-bold">
+            Cyba<span className="text-accent">Op</span>
+          </span>
+          <span className="text-xs text-muted px-2 py-0.5 rounded-full border border-border uppercase tracking-wide">
+            {user.tier || "free"}
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          {user.avatar_url && (
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="w-8 h-8 rounded-full"
+            />
+          )}
+          <span className="text-sm text-muted">{user.username}</span>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-muted hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:border-muted transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </nav>
 
-      <div style={styles.stats}>
-        {user.tier && <span style={styles.badge}>{user.tier}</span>}
-        {user.followers_count !== undefined && <p>Followers: {user.followers_count}</p>}
-        {user.track_count !== undefined && <p>Tracks: {user.track_count}</p>}
+      {/* Main content */}
+      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+        {/* Welcome header */}
+        <div>
+          <h1 className="text-2xl font-bold">
+            Welcome back, {user.display_name || user.username}
+          </h1>
+          <p className="text-muted text-sm mt-1">
+            Here&apos;s your SoundCloud overview
+          </p>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatCard label="Tracks" value={user.track_count} />
+          <StatCard label="Followers" value={user.followers_count} />
+          <StatCard label="Following" value={user.following_count} />
+          <StatCard label="Likes" value={user.likes_count} />
+        </div>
+
+        {/* Placeholder for analytics */}
+        <div className="rounded-lg border border-border bg-surface p-8 text-center space-y-3">
+          <p className="text-muted text-sm">
+            Analytics dashboard coming soon
+          </p>
+          <p className="text-xs text-muted">
+            Track engagement, trend detection, and AI-powered insights will
+            appear here once the backend analytics pipeline is connected.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-const styles = {
-  container: {
-    padding: "2rem",
-    fontFamily: "system-ui, sans-serif",
-    maxWidth: "800px",
-    margin: "0 auto",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "2rem",
-  },
-  logoutBtn: {
-    padding: "0.5rem 1rem",
-    backgroundColor: "transparent",
-    border: "1px solid #666",
-    color: "#666",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "0.9rem",
-  },
-  stats: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "0.5rem",
-  },
-  badge: {
-    display: "inline-block",
-    padding: "0.25rem 0.75rem",
-    backgroundColor: "#1e293b",
-    borderRadius: "12px",
-    fontSize: "0.8rem",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    width: "fit-content",
-  },
-  link: {
-    color: "#f97316",
-  },
-};
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4 space-y-1">
+      <p className="text-xs text-muted uppercase tracking-wide">{label}</p>
+      <p className="text-2xl font-bold font-mono">
+        {value !== undefined ? value.toLocaleString() : "—"}
+      </p>
+    </div>
+  );
+}
