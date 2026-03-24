@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # SoundCloud OAuth
     soundcloud_client_id: str
     soundcloud_client_secret: str
-    soundcloud_redirect_uri: str = "http://localhost:3000/api/auth/soundcloud/callback"
+    soundcloud_redirect_uri: str = ""
 
     # Google Gemini (for paid tier insights)
     google_api_key: str = ""
@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     # API
     api_port: int = 8000
+    port: int = 8000  # Railway/Render set PORT automatically
     api_host: str = "0.0.0.0"
     frontend_url: str = "http://localhost:3000"
 

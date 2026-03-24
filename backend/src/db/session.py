@@ -1,5 +1,7 @@
 """Database connection management with asyncpg — lean, no ORM."""
 
+import ssl
+
 import asyncpg
 
 from src.shared.config import get_settings
@@ -15,10 +17,18 @@ async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
         settings = get_settings()
+        # Neon and most cloud Postgres providers require SSL
+        ssl_context = None
+        if "neon.tech" in settings.database_url or "sslmode" in settings.database_url:
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
         _pool = await asyncpg.create_pool(
             settings.database_url,
-            min_size=2,
-            max_size=10,
+            min_size=1,
+            max_size=5,  # conservative for serverless Postgres
+            ssl=ssl_context,
         )
         logger.info("db_pool_created")
     return _pool
