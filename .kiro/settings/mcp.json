@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "drift": {
+      "command": "/opt/homebrew/bin/driftdetect-mcp",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

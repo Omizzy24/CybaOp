@@ -118,16 +118,16 @@ export default function Dashboard() {
           <StatCard label="Likes" value={user.likes_count} />
         </div>
 
-        {/* Placeholder for analytics */}
-        <div className="rounded-lg border border-border bg-surface p-8 text-center space-y-3">
-          <p className="text-muted text-sm">
-            Analytics dashboard coming soon
-          </p>
+        {/* Analytics link */}
+        <a
+          href="/dashboard/analytics"
+          className="block rounded-lg border border-border bg-surface hover:bg-surface-hover p-6 text-center space-y-2 transition-colors"
+        >
+          <p className="text-sm font-medium">📊 View Analytics</p>
           <p className="text-xs text-muted">
-            Track engagement, trend detection, and AI-powered insights will
-            appear here once the backend analytics pipeline is connected.
+            Track engagement, trend detection, and AI-powered insights
           </p>
-        </div>
+        </a>
       </div>
     </div>
   );

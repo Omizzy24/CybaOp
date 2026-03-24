@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
-const PROFILE_TIMEOUT_MS = 10_000;
+import { backendFetch } from "@/lib/fetch";
 
 /**
  * Proxy to the backend's authenticated user endpoint.
- * The Next.js layer is a thin pass-through — it reads the httpOnly cookie
- * (which the browser can't access directly) and forwards it as a Bearer token
- * to the backend, which owns JWT verification and user data.
+ * Reads the httpOnly cookie and forwards it as a Bearer token.
  */
 export async function GET(req: NextRequest) {
   const token = req.cookies.get("cybaop_token")?.value;
@@ -17,14 +13,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL}/auth/me`, {
+    const res = await backendFetch({
+      path: "/auth/me",
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(PROFILE_TIMEOUT_MS),
+      timeoutMs: 10_000,
+      retries: 2,
     });
 
     if (!res.ok) {
       if (res.status === 401) {
-        // JWT expired/invalid — clear the stale cookie
         const response = NextResponse.json(
           { error: "Session expired" },
           { status: 401 }
