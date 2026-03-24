@@ -19,13 +19,17 @@ async def get_pool() -> asyncpg.Pool:
         settings = get_settings()
         # Neon and most cloud Postgres providers require SSL
         ssl_context = None
-        if "neon.tech" in settings.database_url or "sslmode" in settings.database_url:
+        db_url = settings.database_url
+        if "neon.tech" in db_url or "sslmode" in db_url:
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
+            # Strip query params that asyncpg doesn't understand
+            if "?" in db_url:
+                db_url = db_url.split("?")[0]
 
         _pool = await asyncpg.create_pool(
-            settings.database_url,
+            db_url,
             min_size=1,
             max_size=5,  # conservative for serverless Postgres
             ssl=ssl_context,
