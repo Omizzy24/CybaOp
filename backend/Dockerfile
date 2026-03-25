@@ -7,8 +7,6 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
-# Railway/Render inject PORT at runtime
-ENV PORT=8000
-EXPOSE ${PORT}
+EXPOSE 8080
 
-CMD uvicorn src.api.app:app --host 0.0.0.0 --port ${PORT}
+CMD ["sh", "-c", "uvicorn src.api.app:app --host 0.0.0.0 --port ${PORT:-8080}"]
