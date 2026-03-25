@@ -8,6 +8,7 @@ from src.shared.config import get_settings
 from src.shared.logging import get_logger
 from src.shared.models import AuthTokenRequest, AuthTokenResponse, Tier
 from src.tools.soundcloud import exchange_code_for_token, fetch_profile
+from pydantic import BaseModel
 
 logger = get_logger("routes.auth")
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -147,3 +148,52 @@ async def logout(user: dict = Depends(get_current_user)):
     """
     logger.info("user_logout", user_id=user["sub"])
     return JSONResponse({"success": True})
+
+
+class SCTokenRequest(BaseModel):
+    access_token: str
+
+
+@router.post("/token-from-sc", response_model=AuthTokenResponse)
+async def register_sc_token(request: SCTokenRequest):
+    """Accept an already-exchanged SoundCloud token, fetch profile, persist, issue JWT.
+
+    Used when the frontend exchanges the OAuth code directly with SoundCloud
+    (to avoid cold-start latency killing the short-lived code), then sends
+    the resulting SC token here for user registration and JWT issuance.
+    """
+    settings = get_settings()
+    sc_token = request.access_token
+
+    try:
+        profile = await fetch_profile(sc_token)
+    except Exception as e:
+        logger.error("profile_fetch_failed", error=str(e))
+        raise HTTPException(status_code=502, detail=f"Failed to fetch SoundCloud profile: {e}")
+
+    user_id = f"sc_{profile.platform_user_id}"
+    try:
+        from src.db.queries import upsert_user
+        user_id = await upsert_user(
+            soundcloud_user_id=profile.platform_user_id,
+            username=profile.username,
+            display_name=profile.display_name,
+            soundcloud_token=sc_token,
+            avatar_url=profile.avatar_url,
+        )
+    except Exception as e:
+        if settings.env == "development":
+            logger.warning("db_unavailable_skipping_persist", error=str(e))
+        else:
+            logger.error("user_upsert_failed", error=str(e))
+            raise HTTPException(status_code=503, detail="Database error")
+
+    jwt_token = create_jwt(user_id=user_id, username=profile.username)
+    logger.info("auth_complete_from_sc_token", user_id=user_id, username=profile.username)
+
+    return AuthTokenResponse(
+        access_token=jwt_token,
+        user_id=user_id,
+        username=profile.username,
+        tier=Tier.FREE,
+    )

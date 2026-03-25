@@ -14,43 +14,55 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    let backendRes: Response;
+    // Step 1: Exchange code with SoundCloud directly from Vercel edge.
+    // This must happen immediately — SoundCloud codes expire in ~30s.
+    // Vercel → SoundCloud is fast. Railway cold starts would kill the code.
+    const scRes = await fetch("https://api.soundcloud.com/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.SOUNDCLOUD_CLIENT_ID!,
+        client_secret: process.env.SOUNDCLOUD_CLIENT_SECRET!,
+        redirect_uri: process.env.SOUNDCLOUD_REDIRECT_URI!,
+        grant_type: "authorization_code",
+        code,
+      }),
+    });
+
+    if (!scRes.ok) {
+      const err = await scRes.text();
+      console.error("SoundCloud token exchange failed:", scRes.status, err);
+      return NextResponse.redirect(`${baseUrl}/?error=auth_failed`);
+    }
+
+    const scToken = await scRes.json();
+    const accessToken = scToken.access_token;
+
+    // Step 2: Send the SC token to the backend for profile fetch + persistence.
+    // This is fire-and-forget style — we don't block the user on it.
+    // If the backend is slow/down, the user still gets logged in.
+    let cybaopToken = accessToken; // fallback: use SC token directly
     try {
-      backendRes = await backendFetch({
-        path: "/auth/token",
+      const backendRes = await backendFetch({
+        path: "/auth/token-from-sc",
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          redirect_uri: process.env.SOUNDCLOUD_REDIRECT_URI!,
-        }),
-        timeoutMs: 15_000,
-        retries: 0,
+        body: JSON.stringify({ access_token: accessToken }),
+        timeoutMs: 10_000,
+        retries: 1,
       });
-    } catch (err) {
-      console.error("Backend token exchange failed:", err);
-      return NextResponse.redirect(
-        `${baseUrl}/?error=service_unavailable`
-      );
-    }
 
-    if (!backendRes.ok) {
-      const errorText = await backendRes.text();
-      console.error(
-        "Backend token exchange error:",
-        backendRes.status,
-        errorText
-      );
-      if (backendRes.status === 400) {
-        return NextResponse.redirect(`${baseUrl}/?error=auth_failed`);
+      if (backendRes.ok) {
+        const data = await backendRes.json();
+        cybaopToken = data.access_token;
       }
-      return NextResponse.redirect(`${baseUrl}/?error=exchange_failed`);
+    } catch (err) {
+      // Backend unavailable — fall back to SC token for now
+      console.error("Backend registration failed, using SC token:", err);
     }
 
-    const data = await backendRes.json();
     const response = NextResponse.redirect(`${baseUrl}/dashboard`);
-
-    response.cookies.set("cybaop_token", data.access_token, {
+    response.cookies.set("cybaop_token", cybaopToken, {
       httpOnly: true,
       secure: true,
       sameSite: "lax",
@@ -60,7 +72,6 @@ export async function GET(req: NextRequest) {
 
     return response;
   } catch (err) {
-    // Catch-all: never return a raw 500 to the user
     console.error("Unhandled callback error:", err);
     return NextResponse.redirect(`${baseUrl}/?error=unexpected`);
   }
