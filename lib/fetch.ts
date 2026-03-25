@@ -14,6 +14,14 @@ interface BackendFetchOptions {
   retries?: number;
 }
 
+function makeAbortSignal(timeoutMs: number): AbortSignal | undefined {
+  // AbortSignal.timeout is Node 17.3+ — guard for older runtimes
+  if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  return undefined;
+}
+
 export async function backendFetch({
   path,
   method = "GET",
@@ -30,7 +38,7 @@ export async function backendFetch({
         method,
         headers,
         body,
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: makeAbortSignal(timeoutMs),
       });
       // Don't retry on client errors (4xx) — those won't change
       if (res.ok || (res.status >= 400 && res.status < 500)) {
@@ -42,7 +50,6 @@ export async function backendFetch({
       lastError = err;
     }
 
-    // Exponential backoff: 200ms, 400ms
     if (attempt < retries) {
       await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
     }
