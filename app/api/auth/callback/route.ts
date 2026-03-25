@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { backendFetch } from "@/lib/fetch";
 
 export async function GET(req: NextRequest) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${req.headers.get("host")}`;
 
   try {
     const code = req.nextUrl.searchParams.get("code");
