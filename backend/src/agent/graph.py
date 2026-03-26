@@ -4,6 +4,7 @@ from langgraph.graph import END, StateGraph
 
 from src.agent.edges.routing import (
     route_after_fetch,
+    route_after_metrics,
     route_after_trends,
     route_by_tier,
 )
@@ -19,13 +20,12 @@ from src.agent.state import AnalyticsState
 def build_analytics_graph() -> StateGraph:
     """Build and compile the analytics pipeline graph.
 
-    Free tier:  fetch_profile → fetch_tracks → format_report
+    Free tier:  fetch_profile → fetch_tracks → calculate_metrics → format_report
     Pro tier:   fetch_profile → fetch_tracks → calculate_metrics
                 → detect_trends → generate_insights → format_report
     """
     graph = StateGraph(AnalyticsState)
 
-    # Add nodes
     graph.add_node("fetch_profile", fetch_profile_node)
     graph.add_node("fetch_tracks", fetch_tracks_node)
     graph.add_node("calculate_metrics", calculate_metrics_node)
@@ -33,43 +33,35 @@ def build_analytics_graph() -> StateGraph:
     graph.add_node("generate_insights", generate_insights_node)
     graph.add_node("format_report", format_report_node)
 
-    # Entry point
     graph.set_entry_point("fetch_profile")
 
-    # fetch_profile → fetch_tracks (or format_report on error)
     graph.add_conditional_edges(
         "fetch_profile",
         route_after_fetch,
         {"fetch_tracks": "fetch_tracks", "format_report": "format_report"},
     )
 
-    # fetch_tracks → tier-based routing
     graph.add_conditional_edges(
         "fetch_tracks",
         route_by_tier,
-        {
-            "calculate_metrics": "calculate_metrics",
-            "format_report": "format_report",
-        },
+        {"calculate_metrics": "calculate_metrics", "format_report": "format_report"},
     )
 
-    # calculate_metrics → detect_trends
-    graph.add_edge("calculate_metrics", "detect_trends")
+    # Free tier: calculate_metrics → format_report
+    # Pro tier: calculate_metrics → detect_trends
+    graph.add_conditional_edges(
+        "calculate_metrics",
+        route_after_metrics,
+        {"format_report": "format_report", "detect_trends": "detect_trends"},
+    )
 
-    # detect_trends → generate_insights (or format_report on error)
     graph.add_conditional_edges(
         "detect_trends",
         route_after_trends,
-        {
-            "generate_insights": "generate_insights",
-            "format_report": "format_report",
-        },
+        {"generate_insights": "generate_insights", "format_report": "format_report"},
     )
 
-    # generate_insights → format_report
     graph.add_edge("generate_insights", "format_report")
-
-    # format_report → END
     graph.add_edge("format_report", END)
 
     return graph.compile()

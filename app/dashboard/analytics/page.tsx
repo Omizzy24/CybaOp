@@ -8,7 +8,9 @@ interface TrackMetric {
   title: string;
   engagement_rate: number;
   performance_score: number;
-  play_count?: number;
+  plays_percentile: number;
+  is_outlier: boolean;
+  outlier_direction: string;
 }
 
 interface AnalyticsData {
@@ -25,8 +27,14 @@ interface AnalyticsData {
       total_reposts: number;
       avg_engagement_rate: number;
       catalog_concentration: number;
+      all_track_metrics: TrackMetric[];
     } | null;
-    trends?: unknown | null;
+    trends?: {
+      best_release_day: string | null;
+      best_release_hour: number | null;
+      strongest_era_description: string;
+      confidence: number;
+    } | null;
     insights: unknown[];
     tier: string;
     processing_time_ms: number;
@@ -114,12 +122,18 @@ function AnalyticsContent({
   report: NonNullable<AnalyticsData["report"]>;
   processingMs?: number;
 }) {
-  const hasMetrics = report.metrics != null;
+  const metrics = report.metrics;
+  const trends = report.trends;
+  const allTracks = metrics?.all_track_metrics || report.top_tracks || [];
+  const concentration = metrics?.catalog_concentration || 0;
+
+  // Calculate how many tracks make up the concentration
+  const topTrackCount = Math.max(1, Math.ceil(allTracks.length * 0.2));
 
   return (
     <div className="space-y-8">
-      {/* Processing info */}
-      <div className="flex items-center gap-4 text-xs text-muted">
+      {/* Pipeline info */}
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
         <span>{report.track_count} tracks analyzed</span>
         <span>·</span>
         <span>{report.nodes_executed.length} pipeline stages</span>
@@ -134,55 +148,154 @@ function AnalyticsContent({
         </span>
       </div>
 
-      {/* Metrics grid (only if available — pro tier) */}
-      {hasMetrics ? (
+      {/* Stats grid */}
+      {metrics && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Plays" value={report.metrics!.total_plays} />
-          <StatCard label="Total Likes" value={report.metrics!.total_likes} />
-          <StatCard label="Total Comments" value={report.metrics!.total_comments} />
+          <StatCard label="Total Plays" value={metrics.total_plays} />
+          <StatCard label="Total Likes" value={metrics.total_likes} />
+          <StatCard label="Total Comments" value={metrics.total_comments} />
           <StatCard
             label="Avg Engagement"
-            value={`${(report.metrics!.avg_engagement_rate * 100).toFixed(1)}%`}
+            value={`${(metrics.avg_engagement_rate * 100).toFixed(1)}%`}
           />
-        </div>
-      ) : (
-        <div className="rounded-lg border border-border bg-surface p-6 text-center space-y-2">
-          <p className="text-sm text-muted">
-            Detailed metrics are available on the Pro tier
-          </p>
-          <p className="text-xs text-muted">
-            Upgrade to Pro for engagement rates, trend detection, and AI-powered insights
-          </p>
         </div>
       )}
 
-      {/* Top tracks */}
-      {report.top_tracks && report.top_tracks.length > 0 && (
+      {/* Insight cards row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Best Release Window */}
+        <div className="rounded-lg border border-border bg-surface p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📅</span>
+            <h3 className="text-sm font-semibold">Best Release Window</h3>
+          </div>
+          {trends?.best_release_day ? (
+            <p className="text-sm text-muted">
+              Your tracks released on <span className="text-foreground font-medium">{trends.best_release_day}s</span> tend
+              to get the highest engagement.
+              {trends.best_release_hour !== null && (
+                <> Best hour: <span className="text-foreground font-medium">{trends.best_release_hour}:00</span>.</>
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-muted">Not enough data yet — upload more tracks to unlock this insight.</p>
+          )}
+        </div>
+
+        {/* Catalog Health */}
+        <div className="rounded-lg border border-border bg-surface p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🏥</span>
+            <h3 className="text-sm font-semibold">Catalog Health</h3>
+          </div>
+          {metrics && metrics.total_plays > 0 ? (
+            <p className="text-sm text-muted">
+              Your top {topTrackCount} track{topTrackCount > 1 ? "s" : ""} account
+              for <span className="text-foreground font-medium">{(concentration * 100).toFixed(0)}%</span> of
+              total plays. {concentration > 0.8
+                ? "High concentration — consider promoting your other tracks."
+                : concentration > 0.5
+                  ? "Moderate concentration — healthy catalog distribution."
+                  : "Well distributed — your audience engages across your catalog."}
+            </p>
+          ) : (
+            <p className="text-xs text-muted">No play data available yet.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Strongest Era */}
+      {trends?.strongest_era_description && (
+        <div className="rounded-lg border border-border bg-surface p-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔥</span>
+            <h3 className="text-sm font-semibold">Your Strongest Era</h3>
+          </div>
+          <p className="text-sm text-muted">{trends.strongest_era_description}</p>
+        </div>
+      )}
+
+      {/* Track Performance Table */}
+      {allTracks.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Top Tracks</h2>
+          <h2 className="text-lg font-semibold">Track Performance</h2>
           <div className="rounded-lg border border-border overflow-hidden">
-            {report.top_tracks.map((track, i) => (
+            <div className="grid grid-cols-[2rem_1fr_6rem_6rem] sm:grid-cols-[2rem_1fr_6rem_6rem_6rem] gap-2 px-4 py-2 border-b border-border text-xs text-muted uppercase tracking-wide bg-surface">
+              <span>#</span>
+              <span>Track</span>
+              <span className="text-right">Engagement</span>
+              <span className="text-right">Score</span>
+              <span className="hidden sm:block text-right">Percentile</span>
+            </div>
+            {allTracks.map((track, i) => (
               <div
                 key={track.track_id}
-                className="flex items-center justify-between px-4 py-3 border-b border-border last:border-0 bg-surface"
+                className={`grid grid-cols-[2rem_1fr_6rem_6rem] sm:grid-cols-[2rem_1fr_6rem_6rem_6rem] gap-2 px-4 py-3 border-b border-border last:border-0 ${
+                  track.is_outlier
+                    ? track.outlier_direction === "over"
+                      ? "bg-green-500/5"
+                      : "bg-red-500/5"
+                    : "bg-surface"
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted font-mono w-6">{i + 1}</span>
-                  <span className="text-sm">{track.title}</span>
-                </div>
-                <div className="flex items-center gap-6 text-xs text-muted">
-                  {track.engagement_rate > 0 && (
-                    <span>{(track.engagement_rate * 100).toFixed(1)}% engagement</span>
+                <span className="text-xs text-muted font-mono">{i + 1}</span>
+                <span className="text-sm truncate">
+                  {track.title}
+                  {track.is_outlier && (
+                    <span className={`ml-2 text-xs ${track.outlier_direction === "over" ? "text-green-400" : "text-red-400"}`}>
+                      {track.outlier_direction === "over" ? "↑ outperforming" : "↓ underperforming"}
+                    </span>
                   )}
-                  {track.performance_score > 0 && (
-                    <span>score: {track.performance_score.toFixed(1)}</span>
-                  )}
-                </div>
+                </span>
+                <span className="text-xs text-muted text-right font-mono">
+                  {(track.engagement_rate * 100).toFixed(1)}%
+                </span>
+                <span className="text-xs text-muted text-right font-mono">
+                  {track.performance_score.toFixed(2)}
+                </span>
+                <span className="hidden sm:block text-xs text-muted text-right font-mono">
+                  {(track.plays_percentile * 100).toFixed(0)}%
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Pro Feature Teasers */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-muted">Pro Features</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <ProTeaser
+            icon="📉"
+            title="Engagement Decay Curves"
+            description="See how quickly plays drop off after release — identify tracks with long-tail vs flash-in-the-pan performance."
+          />
+          <ProTeaser
+            icon="🤖"
+            title="AI Release Strategy"
+            description="Get personalized recommendations on what to release next based on what's working in your catalog."
+          />
+          <ProTeaser
+            icon="🔍"
+            title="Competitor Benchmarking"
+            description="Compare your engagement rates and growth to similar artists in your genre."
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProTeaser({ icon, title, description }: { icon: string; title: string; description: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface/50 p-5 space-y-2 opacity-60">
+      <div className="flex items-center gap-2">
+        <span className="text-lg">{icon}</span>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent uppercase tracking-wider">Pro</span>
+      </div>
+      <p className="text-xs text-muted leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -192,12 +305,17 @@ function LoadingSkeleton() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="rounded-lg border border-border bg-surface p-4 space-y-2 animate-pulse"
-          >
+          <div key={i} className="rounded-lg border border-border bg-surface p-4 space-y-2 animate-pulse">
             <div className="h-3 w-16 bg-border rounded" />
             <div className="h-8 w-24 bg-border rounded" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="rounded-lg border border-border bg-surface p-5 space-y-2 animate-pulse">
+            <div className="h-4 w-32 bg-border rounded" />
+            <div className="h-3 w-48 bg-border rounded" />
           </div>
         ))}
       </div>

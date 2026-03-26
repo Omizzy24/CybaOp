@@ -1,6 +1,11 @@
 """Tests for LangGraph edge routing logic."""
 
-from src.agent.edges.routing import route_after_fetch, route_by_tier, route_after_trends
+from src.agent.edges.routing import (
+    route_after_fetch,
+    route_after_metrics,
+    route_by_tier,
+    route_after_trends,
+)
 
 
 def _make_state(**overrides):
@@ -32,7 +37,8 @@ def test_route_after_fetch_error():
 
 
 def test_route_by_tier_free():
-    assert route_by_tier(_make_state(tier="free")) == "format_report"
+    # Free tier now gets calculate_metrics (catalog overview)
+    assert route_by_tier(_make_state(tier="free")) == "calculate_metrics"
 
 
 def test_route_by_tier_pro():
@@ -45,6 +51,20 @@ def test_route_by_tier_enterprise():
 
 def test_route_by_tier_error_overrides():
     assert route_by_tier(_make_state(tier="pro", error="fail")) == "format_report"
+
+
+def test_route_after_metrics_free():
+    # Free tier: metrics → format_report (skip trends/insights)
+    assert route_after_metrics(_make_state(tier="free")) == "format_report"
+
+
+def test_route_after_metrics_pro():
+    # Pro tier: metrics → detect_trends
+    assert route_after_metrics(_make_state(tier="pro")) == "detect_trends"
+
+
+def test_route_after_metrics_error():
+    assert route_after_metrics(_make_state(error="fail")) == "format_report"
 
 
 def test_route_after_trends_success():
