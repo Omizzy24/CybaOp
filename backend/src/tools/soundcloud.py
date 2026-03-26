@@ -82,7 +82,7 @@ def _normalize_track(raw: dict) -> TrackData:
         platform_track_id=str(raw.get("id", "")),
         title=raw.get("title", ""),
         play_count=raw.get("playback_count", 0) or raw.get("plays_count", 0) or 0,
-        like_count=raw.get("likes_count", 0) or raw.get("favoritings_count", 0) or 0,
+        like_count=raw.get("favoritings_count", 0) or raw.get("likes_count", 0) or 0,
         comment_count=raw.get("comment_count", 0) or 0,
         repost_count=raw.get("reposts_count", 0) or 0,
         download_count=raw.get("download_count", 0) or 0,

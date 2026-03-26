@@ -31,7 +31,12 @@ async def lifespan(app: FastAPI):
         await initialize_schema()
         logger.info("database_ready")
     except Exception as e:
-        logger.error("database_init_failed", error=str(e))
+        if settings.env == "development":
+            logger.warning("database_init_skipped", error=str(e),
+                          hint="Running without DB — auth will work, persistence won't")
+        else:
+            logger.error("database_init_failed", error=str(e))
+            raise
 
     yield
 
