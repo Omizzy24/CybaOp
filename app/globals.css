@@ -36,3 +36,22 @@ body {
   transition-duration: 150ms;
   transition-timing-function: ease;
 }
+
+/* Landing page animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.1; }
+  50% { transform: translateY(-40px) scale(1.5); opacity: 0.3; }
+}
+
+@keyframes cta-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-cta-pulse {
+  animation: cta-pulse 2s ease-in-out infinite;
+}
