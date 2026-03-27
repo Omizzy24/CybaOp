@@ -44,7 +44,7 @@ export function EngagementBarChart({ tracks }: { tracks: TrackMetric[] }) {
             <Tooltip
               contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12 }}
               labelStyle={{ color: "#ededed" }}
-              formatter={(v: number) => [`${v}%`, "Engagement"]}
+              formatter={(v: number | string | undefined) => [`${v ?? 0}%`, "Engagement"]}
             />
             <Bar dataKey="rate" radius={[0, 4, 4, 0]}>
               {data.map((entry, i) => (
@@ -94,7 +94,7 @@ export function GenreDonutChart({ genres, totalTracks }: { genres: GenreData[]; 
             </Pie>
             <Tooltip
               contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12 }}
-              formatter={(v: number, name: string) => [`${v} tracks`, name]}
+              formatter={(v: number | string | undefined, name: string) => [`${v ?? 0} tracks`, name]}
             />
           </PieChart>
         </ResponsiveContainer>

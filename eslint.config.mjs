@@ -2,9 +2,14 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals.js";
 import nextTs from "eslint-config-next/typescript.js";
 
+// eslint-config-next 15.3.8 may export a single config object or an array.
+// Normalize to array to prevent "not iterable" errors.
+const vitals = Array.isArray(nextVitals) ? nextVitals : [nextVitals];
+const ts = Array.isArray(nextTs) ? nextTs : [nextTs];
+
 const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
+  ...vitals,
+  ...ts,
   globalIgnores([
     ".next/**",
     "out/**",
