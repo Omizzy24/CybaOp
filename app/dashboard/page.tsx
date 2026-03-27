@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "./components/nav";
 import { CountUp } from "./components/count-up";
+import { Onboarding } from "./components/onboarding";
 
 interface UserData {
   username?: string;
@@ -22,7 +23,14 @@ interface UserData {
 export default function Dashboard() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("cybaop_onboarded")) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -129,6 +137,14 @@ export default function Dashboard() {
           </p>
         </a>
       </div>
+
+      {showOnboarding && (
+        <Onboarding
+          highlightStat={user.track_count}
+          highlightLabel="tracks in your catalog"
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
 
       <BottomNav />
     </div>
