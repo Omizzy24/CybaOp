@@ -34,6 +34,7 @@ function HomeContent() {
             </p>
           </div>
 
+          {/* TODO: Replace with real waitlist count from backend when /api/waitlist endpoint exists */}
           <p className="text-xs text-muted/60">Join 500+ SoundCloud creators</p>
 
           {error && (
