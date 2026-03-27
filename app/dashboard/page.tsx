@@ -100,7 +100,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8 animate-page-enter">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">
             Welcome back, {user.display_name || user.username}
@@ -110,7 +110,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
           <StatCard label="Tracks" value={user.track_count} />
           <StatCard label="Followers" value={user.followers_count} />
           <StatCard label="Following" value={user.following_count} />
@@ -119,7 +119,7 @@ export default function Dashboard() {
 
         <a
           href="/dashboard/analytics"
-          className="block rounded-lg border border-border bg-surface hover:bg-surface-hover p-5 sm:p-6 text-center space-y-2"
+          className="block rounded-xl border border-accent/20 bg-accent/[0.03] hover:bg-accent/[0.06] p-5 sm:p-6 text-center space-y-2 card-lift"
         >
           <p className="text-sm font-medium">📊 View Analytics</p>
           <p className="text-xs text-muted">
@@ -129,7 +129,7 @@ export default function Dashboard() {
 
         <a
           href="/dashboard/share"
-          className="block rounded-lg border border-border bg-surface hover:bg-surface-hover p-5 sm:p-6 text-center space-y-2"
+          className="block rounded-xl border border-sky/20 bg-sky-dim hover:bg-sky/[0.08] p-5 sm:p-6 text-center space-y-2 card-lift"
         >
           <p className="text-sm font-medium">📤 Share Your Stats</p>
           <p className="text-xs text-muted">
@@ -153,7 +153,7 @@ export default function Dashboard() {
 
 function StatCard({ label, value }: { label: string; value?: number }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-3 sm:p-4 space-y-1">
+    <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 space-y-1 card-lift">
       <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wide">{label}</p>
       <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">
         {value !== undefined ? <CountUp end={value} /> : "—"}

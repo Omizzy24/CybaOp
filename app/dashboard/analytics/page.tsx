@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "../components/nav";
 import { EngagementBarChart, ReleaseDayHeatmap, PlaysOverTimeChart } from "../components/charts";
 import { CountUp } from "../components/count-up";
+import { ProgressRing } from "../components/progress-ring";
+import { StreakBadge } from "../components/streak";
 
 interface TrackMetric {
   track_id: string;
@@ -105,10 +107,13 @@ export default function Analytics() {
         <a href="/dashboard" className="text-xs text-muted">← Back</a>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Analytics</h1>
-          <p className="text-muted text-sm mt-1">Track performance, engagement trends, and catalog insights</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8 animate-page-enter">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">Analytics</h1>
+            <p className="text-muted text-sm mt-1">Track performance, engagement trends, and catalog insights</p>
+          </div>
+          <StreakBadge />
         </div>
 
         {loading ? <LoadingSkeleton /> : error ? <ErrorState message={error} onRetry={fetchAnalytics} /> : data?.report ? <AnalyticsContent report={data.report} processingMs={data.processing_time_ms} /> : <ErrorState message="No data available" onRetry={fetchAnalytics} />}
@@ -135,6 +140,9 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
       .catch(() => {});
   }, []);
 
+  // Compute max values for progress rings
+  const maxPlays = metrics ? Math.max(metrics.total_plays, 1) : 1;
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Pipeline info */}
@@ -146,19 +154,57 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
         <span className="px-2 py-0.5 rounded-full border border-border uppercase tracking-wide">{report.tier}</span>
       </div>
 
-      {/* Stats grid */}
+      {/* Progress rings row */}
       {metrics && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard label="Total Plays" value={metrics.total_plays} />
-          <StatCard label="Total Likes" value={metrics.total_likes} />
-          <StatCard label="Total Comments" value={metrics.total_comments} />
-          <StatCard label="Avg Engagement" value={`${(metrics.avg_engagement_rate * 100).toFixed(1)}%`} />
+        <div className="rounded-xl border border-border bg-surface p-5 sm:p-6 card-lift">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 justify-items-center stagger-children">
+            <ProgressRing
+              value={metrics.total_plays}
+              max={maxPlays}
+              color="var(--accent)"
+              label="Total Plays"
+              size={88}
+            />
+            <ProgressRing
+              value={metrics.total_likes}
+              max={maxPlays}
+              color="var(--sky)"
+              label="Total Likes"
+              size={88}
+            />
+            <ProgressRing
+              value={metrics.total_comments}
+              max={maxPlays}
+              color="var(--violet)"
+              label="Comments"
+              size={88}
+            />
+            <ProgressRing
+              value={metrics.avg_engagement_rate * 100}
+              max={100}
+              color="var(--lime)"
+              label="Engagement"
+              size={88}
+              suffix="%"
+              decimals={1}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Stat cards (compact, with CountUp) */}
+      {metrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
+          <StatCard label="Total Plays" value={metrics.total_plays} accent="var(--accent)" />
+          <StatCard label="Total Likes" value={metrics.total_likes} accent="var(--sky)" />
+          <StatCard label="Total Comments" value={metrics.total_comments} accent="var(--violet)" />
+          <StatCard label="Avg Engagement" value={`${(metrics.avg_engagement_rate * 100).toFixed(1)}%`} accent="var(--lime)" />
         </div>
       )}
 
       {/* Insight cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div className="rounded-lg border border-border bg-surface p-4 sm:p-5 space-y-2">
+        <div className="rounded-xl border border-sky/20 bg-sky-dim p-4 sm:p-5 space-y-2 card-lift">
           <div className="flex items-center gap-2">
             <span className="text-lg">📅</span>
             <h3 className="text-sm font-semibold">Best Release Window</h3>
@@ -171,7 +217,7 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
           ) : <p className="text-xs text-muted">Not enough data yet.</p>}
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 sm:p-5 space-y-2">
+        <div className="rounded-xl border border-lime/20 bg-lime-dim p-4 sm:p-5 space-y-2 card-lift">
           <div className="flex items-center gap-2">
             <span className="text-lg">🏥</span>
             <h3 className="text-sm font-semibold">Catalog Health</h3>
@@ -193,10 +239,10 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
             {report.eras.map((era) => {
               const isStrongest = report.era_fingerprint && era.avg_engagement_rate === Math.max(...(report.eras || []).map(e => e.avg_engagement_rate));
               return (
-                <div key={era.era_id} className={`flex-shrink-0 w-48 rounded-lg border bg-surface p-4 space-y-2 ${isStrongest ? "border-accent ring-1 ring-accent/20" : "border-border"}`}>
+                <div key={era.era_id} className={`flex-shrink-0 w-48 rounded-xl border bg-surface p-4 space-y-2 card-lift ${isStrongest ? "border-accent ring-1 ring-accent/20" : "border-border"}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">{era.era_id}</span>
-                    {isStrongest && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">Best</span>}
+                    {isStrongest && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">Best</span>}
                   </div>
                   <div className="space-y-1 text-xs text-muted">
                     <div className="flex justify-between"><span>Tracks</span><span className="font-mono">{era.track_count}</span></div>
@@ -215,20 +261,20 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
       {report.era_fingerprint && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Strongest Era Fingerprint</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
+            <div className="rounded-xl border border-accent/20 bg-accent/[0.03] p-3 space-y-1 card-lift">
               <p className="text-[10px] text-muted uppercase tracking-wide">Genre</p>
               <p className="text-sm font-semibold">{report.era_fingerprint.dominant_genre || "Mixed"}</p>
             </div>
-            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+            <div className="rounded-xl border border-sky/20 bg-sky-dim p-3 space-y-1 card-lift">
               <p className="text-[10px] text-muted uppercase tracking-wide">Avg Duration</p>
               <p className="text-sm font-semibold font-mono">{Math.round(report.era_fingerprint.avg_duration_ms / 1000)}s</p>
             </div>
-            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+            <div className="rounded-xl border border-violet/20 bg-violet-dim p-3 space-y-1 card-lift">
               <p className="text-[10px] text-muted uppercase tracking-wide">Avg Plays</p>
               <p className="text-sm font-semibold font-mono">{Math.round(report.era_fingerprint.avg_plays).toLocaleString()}</p>
             </div>
-            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+            <div className="rounded-xl border border-lime/20 bg-lime-dim p-3 space-y-1 card-lift">
               <p className="text-[10px] text-muted uppercase tracking-wide">Engagement</p>
               <p className="text-sm font-semibold font-mono">{(report.era_fingerprint.avg_engagement * 100).toFixed(1)}%</p>
             </div>
@@ -237,7 +283,7 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
       )}
 
       {trends?.strongest_era_description && !report.eras?.length && (
-        <div className="rounded-lg border border-border bg-surface p-4 sm:p-5 space-y-2">
+        <div className="rounded-xl border border-rose/20 bg-rose-dim p-4 sm:p-5 space-y-2 card-lift">
           <div className="flex items-center gap-2"><span className="text-lg">🔥</span><h3 className="text-sm font-semibold">Your Strongest Era</h3></div>
           <p className="text-sm text-muted">{trends.strongest_era_description}</p>
         </div>
@@ -259,11 +305,11 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
         </div>
       )}
 
-      {/* Track table — horizontal scroll on mobile */}
+      {/* Track table */}
       {allTracks.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Track Performance</h2>
-          <div className="rounded-lg border border-border overflow-x-auto">
+          <div className="rounded-xl border border-border overflow-x-auto">
             <table className="w-full min-w-[480px]">
               <thead>
                 <tr className="text-xs text-muted uppercase tracking-wide bg-surface border-b border-border">
@@ -276,11 +322,11 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
               </thead>
               <tbody>
                 {allTracks.map((track, i) => (
-                  <tr key={track.track_id} className={`border-b border-border last:border-0 ${track.is_outlier ? (track.outlier_direction === "over" ? "bg-green-500/5" : "bg-red-500/5") : "bg-surface"}`}>
+                  <tr key={track.track_id} className={`border-b border-border last:border-0 ${track.is_outlier ? (track.outlier_direction === "over" ? "bg-lime/5" : "bg-rose/5") : "bg-surface"}`}>
                     <td className="px-3 sm:px-4 py-3 text-xs text-muted font-mono">{i + 1}</td>
                     <td className="px-3 sm:px-4 py-3 text-sm sticky left-0 bg-inherit">
                       <span className="truncate block max-w-[200px]">{track.title}</span>
-                      {track.is_outlier && <span className={`text-xs ${track.outlier_direction === "over" ? "text-green-400" : "text-red-400"}`}>{track.outlier_direction === "over" ? "↑ outperforming" : "↓ underperforming"}</span>}
+                      {track.is_outlier && <span className={`text-xs ${track.outlier_direction === "over" ? "text-lime" : "text-rose"}`}>{track.outlier_direction === "over" ? "↑ outperforming" : "↓ underperforming"}</span>}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-xs text-muted text-right font-mono tabular-nums">{(track.engagement_rate * 100).toFixed(1)}%</td>
                     <td className="px-3 sm:px-4 py-3 text-xs text-muted text-right font-mono tabular-nums">{track.performance_score.toFixed(2)}</td>
@@ -296,7 +342,7 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
       {/* Pro teasers */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold text-muted">Pro Features</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 stagger-children">
           <ProTeaser icon="📉" title="Engagement Decay" description="See how plays drop off after release." featureId="engagement_decay" />
           <ProTeaser icon="🤖" title="AI Strategy" description="Personalized release recommendations." featureId="ai_strategy" />
           <ProTeaser icon="🔍" title="Benchmarking" description="Compare to similar artists." featureId="benchmarking" />
@@ -346,11 +392,11 @@ function ProTeaser({ icon, title, description, featureId }: { icon: string; titl
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface/50 p-4 sm:p-5 space-y-3">
+    <div className="rounded-xl border border-border bg-surface/50 p-4 sm:p-5 space-y-3 card-lift">
       <div className="flex items-center gap-2">
         <span>{icon}</span>
         <h3 className="text-sm font-semibold">{title}</h3>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent uppercase tracking-wider">Pro</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-dim text-violet uppercase tracking-wider">Pro</span>
       </div>
       <p className="text-xs text-muted leading-relaxed">{description}</p>
       {mode === "idle" && (
@@ -369,31 +415,25 @@ function ProTeaser({ icon, title, description, featureId }: { icon: string; titl
               placeholder="your@email.com"
               className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-background border border-border rounded-md focus:border-accent focus:outline-none"
             />
-            <button
-              onClick={handleSubmit}
-              disabled={!email}
-              className="px-3 py-1.5 text-xs bg-accent text-white rounded-md disabled:opacity-40"
-            >
-              Submit
-            </button>
+            <button onClick={handleSubmit} disabled={!email} className="px-3 py-1.5 text-xs bg-accent text-white rounded-md disabled:opacity-40">Submit</button>
           </div>
-          {error && <p className="text-[10px] text-red-400">{error}</p>}
+          {error && <p className="text-[10px] text-rose">{error}</p>}
         </div>
       )}
       {mode === "done" && (
-        <p className="text-xs text-green-400 flex items-center gap-1">✓ You&apos;re on the list</p>
+        <p className="text-xs text-lime flex items-center gap-1">✓ You&apos;re on the list</p>
       )}
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+function StatCard({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
   const isNumber = typeof value === "number";
   const isPercent = typeof value === "string" && value.endsWith("%");
   const numericValue = isPercent ? parseFloat(value) : isNumber ? value : 0;
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-3 sm:p-4 space-y-1">
+    <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 space-y-1 card-lift" style={accent ? { borderColor: `color-mix(in srgb, ${accent} 25%, transparent)` } : undefined}>
       <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wide">{label}</p>
       <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">
         {isNumber ? (
@@ -410,12 +450,17 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
+      <div className="rounded-xl border border-border bg-surface p-6 animate-pulse">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 justify-items-center">
+          {[...Array(4)].map((_, i) => <div key={i} className="w-[88px] h-[88px] rounded-full bg-border/50" />)}
+        </div>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[...Array(4)].map((_, i) => <div key={i} className="rounded-lg border border-border bg-surface p-4 space-y-2 animate-pulse"><div className="h-3 w-16 bg-border rounded" /><div className="h-8 w-24 bg-border rounded" /></div>)}
+        {[...Array(4)].map((_, i) => <div key={i} className="rounded-xl border border-border bg-surface p-4 space-y-2 animate-pulse"><div className="h-3 w-16 bg-border rounded" /><div className="h-8 w-24 bg-border rounded" /></div>)}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[...Array(2)].map((_, i) => <div key={i} className="rounded-lg border border-border bg-surface p-5 space-y-2 animate-pulse"><div className="h-4 w-32 bg-border rounded" /><div className="h-3 w-48 bg-border rounded" /></div>)}
+        {[...Array(2)].map((_, i) => <div key={i} className="rounded-xl border border-border bg-surface p-5 space-y-2 animate-pulse"><div className="h-4 w-32 bg-border rounded" /><div className="h-3 w-48 bg-border rounded" /></div>)}
       </div>
     </div>
   );
@@ -423,9 +468,9 @@ function LoadingSkeleton() {
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-8 text-center space-y-4">
+    <div className="rounded-xl border border-border bg-surface p-8 text-center space-y-4">
       <p className="text-muted">{message}</p>
-      <button onClick={onRetry} className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm">Retry</button>
+      <button onClick={onRetry} className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm">Retry</button>
     </div>
   );
 }
