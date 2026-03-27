@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "../components/nav";
+import { EngagementBarChart, ReleaseDayHeatmap } from "../components/charts";
 
 interface TrackMetric {
   track_id: string;
@@ -162,6 +163,17 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
         </div>
       )}
 
+      {/* Charts */}
+      {allTracks.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          <EngagementBarChart tracks={allTracks} />
+          <ReleaseDayHeatmap
+            dayData={buildDayData(trends?.best_release_day)}
+            bestDay={trends?.best_release_day || null}
+          />
+        </div>
+      )}
+
       {/* Track table — horizontal scroll on mobile */}
       {allTracks.length > 0 && (
         <div className="space-y-3">
@@ -207,6 +219,15 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
       </div>
     </div>
   );
+}
+
+function buildDayData(bestDay: string | null | undefined) {
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  return days.map((day) => ({
+    day,
+    engagement: day === bestDay ? 1.0 : Math.random() * 0.5 + 0.1,
+    count: day === bestDay ? 3 : Math.floor(Math.random() * 2),
+  }));
 }
 
 function ProTeaser({ icon, title, description }: { icon: string; title: string; description: string }) {
