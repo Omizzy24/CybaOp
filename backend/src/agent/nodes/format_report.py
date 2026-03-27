@@ -55,6 +55,8 @@ def format_report_node(state: AnalyticsState) -> dict:
             metrics=metrics,
             trends=trends,
             insights=insights,
+            eras=state.get("eras") or [],
+            era_fingerprint=state.get("era_fingerprint"),
             tier=tier,
             data_freshness_seconds=freshness,
             is_stale=is_stale,

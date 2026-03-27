@@ -26,3 +26,5 @@ class AnalyticsState(TypedDict):
     nodes_executed: list[str]
     error: Optional[str]
     snapshots: list[dict]  # historical track snapshots for trend detection
+    eras: list[dict]
+    era_fingerprint: Optional[dict]

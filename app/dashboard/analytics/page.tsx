@@ -39,6 +39,25 @@ interface AnalyticsData {
       confidence: number;
     } | null;
     insights: unknown[];
+    eras?: Array<{
+      era_id: string;
+      start: string;
+      end: string;
+      track_count: number;
+      total_plays: number;
+      avg_engagement_rate: number;
+      top_track: string;
+      genres: string[];
+      avg_duration_ms: number;
+    }>;
+    era_fingerprint?: {
+      avg_duration_ms: number;
+      dominant_genre: string;
+      genre_distribution: Record<string, number>;
+      avg_plays: number;
+      avg_engagement: number;
+      track_count: number;
+    } | null;
     tier: string;
     processing_time_ms: number;
     nodes_executed: string[];
@@ -157,7 +176,58 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
         </div>
       </div>
 
-      {trends?.strongest_era_description && (
+      {/* Era Timeline */}
+      {report.eras && report.eras.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Creative Eras</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {report.eras.map((era) => {
+              const isStrongest = report.era_fingerprint && era.avg_engagement_rate === Math.max(...(report.eras || []).map(e => e.avg_engagement_rate));
+              return (
+                <div key={era.era_id} className={`flex-shrink-0 w-48 rounded-lg border bg-surface p-4 space-y-2 ${isStrongest ? "border-accent ring-1 ring-accent/20" : "border-border"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">{era.era_id}</span>
+                    {isStrongest && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">Best</span>}
+                  </div>
+                  <div className="space-y-1 text-xs text-muted">
+                    <div className="flex justify-between"><span>Tracks</span><span className="font-mono">{era.track_count}</span></div>
+                    <div className="flex justify-between"><span>Plays</span><span className="font-mono">{era.total_plays.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Engagement</span><span className="font-mono">{(era.avg_engagement_rate * 100).toFixed(1)}%</span></div>
+                  </div>
+                  <p className="text-[10px] text-muted truncate">Top: {era.top_track}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Era Fingerprint */}
+      {report.era_fingerprint && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Strongest Era Fingerprint</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+              <p className="text-[10px] text-muted uppercase tracking-wide">Genre</p>
+              <p className="text-sm font-semibold">{report.era_fingerprint.dominant_genre || "Mixed"}</p>
+            </div>
+            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+              <p className="text-[10px] text-muted uppercase tracking-wide">Avg Duration</p>
+              <p className="text-sm font-semibold font-mono">{Math.round(report.era_fingerprint.avg_duration_ms / 1000)}s</p>
+            </div>
+            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+              <p className="text-[10px] text-muted uppercase tracking-wide">Avg Plays</p>
+              <p className="text-sm font-semibold font-mono">{Math.round(report.era_fingerprint.avg_plays).toLocaleString()}</p>
+            </div>
+            <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-3 space-y-1">
+              <p className="text-[10px] text-muted uppercase tracking-wide">Engagement</p>
+              <p className="text-sm font-semibold font-mono">{(report.era_fingerprint.avg_engagement * 100).toFixed(1)}%</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trends?.strongest_era_description && !report.eras?.length && (
         <div className="rounded-lg border border-border bg-surface p-4 sm:p-5 space-y-2">
           <div className="flex items-center gap-2"><span className="text-lg">🔥</span><h3 className="text-sm font-semibold">Your Strongest Era</h3></div>
           <p className="text-sm text-muted">{trends.strongest_era_description}</p>

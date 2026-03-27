@@ -162,3 +162,85 @@ def analyze_trends(
         strongest_era_description=era_desc,
         confidence=round(confidence, 2),
     )
+
+
+def cluster_into_eras(tracks: list[TrackData], window_months: int = 6) -> list[dict]:
+    """Group tracks into time-based eras (6-month windows) and compute per-era metrics."""
+    dated = [t for t in tracks if t.created_at is not None]
+    if not dated:
+        return []
+
+    dated.sort(key=lambda t: t.created_at)
+
+    eras: dict[str, list[TrackData]] = defaultdict(list)
+    for t in dated:
+        year = t.created_at.year
+        half = "H1" if t.created_at.month <= 6 else "H2"
+        era_id = f"{year}-{half}"
+        eras[era_id].append(t)
+
+    result = []
+    for era_id, era_tracks in eras.items():
+        year = int(era_id.split("-")[0])
+        is_h1 = era_id.endswith("H1")
+        start = datetime(year, 1, 1, tzinfo=timezone.utc) if is_h1 else datetime(year, 7, 1, tzinfo=timezone.utc)
+        end = datetime(year, 6, 30, tzinfo=timezone.utc) if is_h1 else datetime(year, 12, 31, tzinfo=timezone.utc)
+
+        total_plays = sum(t.play_count for t in era_tracks)
+        engagement_rates = []
+        for t in era_tracks:
+            if t.play_count > 0:
+                er = (t.like_count + t.comment_count + t.repost_count) / t.play_count
+                engagement_rates.append(er)
+
+        avg_er = sum(engagement_rates) / len(engagement_rates) if engagement_rates else 0.0
+        top = max(era_tracks, key=lambda t: t.play_count)
+        genres = list({t.genre for t in era_tracks if t.genre})
+        avg_dur = int(sum(t.duration_ms for t in era_tracks) / len(era_tracks)) if era_tracks else 0
+
+        result.append({
+            "era_id": era_id,
+            "start": start,
+            "end": end,
+            "track_count": len(era_tracks),
+            "total_plays": total_plays,
+            "avg_engagement_rate": round(avg_er, 6),
+            "top_track": top.title,
+            "genres": genres,
+            "avg_duration_ms": avg_dur,
+        })
+
+    result.sort(key=lambda e: e["start"], reverse=True)
+    return result
+
+
+def fingerprint_era(tracks: list[TrackData]) -> dict:
+    """Extract the stylistic fingerprint of a set of tracks. Pure aggregation."""
+    if not tracks:
+        return {}
+
+    genre_dist: dict[str, int] = defaultdict(int)
+    for t in tracks:
+        if t.genre:
+            genre_dist[t.genre] += 1
+
+    dominant = max(genre_dist, key=genre_dist.get) if genre_dist else ""
+    avg_dur = int(sum(t.duration_ms for t in tracks) / len(tracks))
+    avg_plays = sum(t.play_count for t in tracks) / len(tracks)
+
+    engagement_rates = []
+    for t in tracks:
+        if t.play_count > 0:
+            engagement_rates.append(
+                (t.like_count + t.comment_count + t.repost_count) / t.play_count
+            )
+    avg_eng = sum(engagement_rates) / len(engagement_rates) if engagement_rates else 0.0
+
+    return {
+        "avg_duration_ms": avg_dur,
+        "dominant_genre": dominant,
+        "genre_distribution": dict(genre_dist),
+        "avg_plays": round(avg_plays, 1),
+        "avg_engagement": round(avg_eng, 6),
+        "track_count": len(tracks),
+    }

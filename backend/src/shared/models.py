@@ -133,6 +133,8 @@ class AnalyticsReport(BaseModel):
     metrics: Optional[AnalyticsMetrics] = None
     trends: Optional[TrendAnalysis] = None
     insights: list[InsightItem] = []
+    eras: list[dict] = []
+    era_fingerprint: Optional[dict] = None
     tier: Tier = Tier.FREE
     data_freshness_seconds: int = 0
     is_stale: bool = False

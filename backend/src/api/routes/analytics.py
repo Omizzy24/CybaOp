@@ -103,6 +103,8 @@ async def get_insights(
             "nodes_executed": [],
             "error": None,
             "snapshots": snapshots,
+            "eras": [],
+            "era_fingerprint": None,
         }
 
         result = await graph.ainvoke(initial_state)
