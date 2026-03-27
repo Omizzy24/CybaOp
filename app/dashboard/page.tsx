@@ -118,6 +118,16 @@ export default function Dashboard() {
             Track engagement, trend detection, and AI-powered insights
           </p>
         </a>
+
+        <a
+          href="/dashboard/share"
+          className="block rounded-lg border border-border bg-surface hover:bg-surface-hover p-5 sm:p-6 text-center space-y-2"
+        >
+          <p className="text-sm font-medium">📤 Share Your Stats</p>
+          <p className="text-xs text-muted">
+            Download a shareable card for Instagram Stories or Twitter
+          </p>
+        </a>
       </div>
 
       <BottomNav />
