@@ -191,3 +191,19 @@ class ErrorResponse(BaseModel):
     cached_data_available: bool = False
     cache_age_seconds: Optional[int] = None
     retry_after_seconds: Optional[int] = None
+
+
+class HistoryDataPoint(BaseModel):
+    """A single day's aggregate snapshot for the plays-over-time chart."""
+    day: str  # ISO date string e.g. "2025-06-15"
+    total_plays: int = 0
+    total_likes: int = 0
+    track_count: int = 0
+
+
+class HistoryResponse(BaseModel):
+    """Response for GET /analytics/history."""
+    success: bool
+    data: list[HistoryDataPoint] = []
+    days_requested: int = 90
+    message: str = ""

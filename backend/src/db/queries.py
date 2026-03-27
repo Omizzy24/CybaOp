@@ -143,3 +143,24 @@ async def get_all_track_history(
             user_id,
         )
         return [dict(r) for r in rows]
+
+
+async def get_plays_over_time(
+    user_id: str, days: int = 90
+) -> list[dict[str, Any]]:
+    """Get daily aggregate play counts for the plays-over-time chart."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """SELECT date_trunc('day', captured_at)::date AS day,
+                      SUM(play_count) AS total_plays,
+                      SUM(like_count) AS total_likes,
+                      COUNT(DISTINCT track_id) AS track_count
+               FROM track_snapshots
+               WHERE user_id = $1
+                 AND captured_at >= NOW() - make_interval(days => $2)
+               GROUP BY date_trunc('day', captured_at)::date
+               ORDER BY day ASC""",
+            user_id, days,
+        )
+        return [dict(r) for r in rows]

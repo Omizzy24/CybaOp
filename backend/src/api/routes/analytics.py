@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.agent.graph import build_analytics_graph
 from src.api.auth import get_current_user
-from src.db.queries import get_user_token, update_last_analytics, save_track_snapshots, get_all_track_history
+from src.db.queries import get_user_token, update_last_analytics, save_track_snapshots, get_all_track_history, get_plays_over_time
 from src.shared.config import get_settings
 from src.shared.logging import bind_correlation_id, get_logger
-from src.shared.models import AnalyticsResponse
+from src.shared.models import AnalyticsResponse, HistoryResponse, HistoryDataPoint
 
 logger = get_logger("routes.analytics")
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -164,4 +164,39 @@ async def get_insights(
             message=f"Analytics error: {str(e)}",
             error_code="INTERNAL_ERROR",
             processing_time_ms=elapsed,
+        )
+
+
+@router.get("/history", response_model=HistoryResponse)
+async def get_history(
+    user: dict = Depends(get_current_user),
+    days: int = Query(90, ge=1, le=365),
+):
+    """Return daily aggregate play/like counts for the plays-over-time chart."""
+    user_id = user["sub"]
+    logger.info("history_request", user_id=user_id, days=days)
+
+    try:
+        rows = await get_plays_over_time(user_id, days)
+        data = [
+            HistoryDataPoint(
+                day=str(r["day"]),
+                total_plays=r["total_plays"],
+                total_likes=r["total_likes"],
+                track_count=r["track_count"],
+            )
+            for r in rows
+        ]
+        return HistoryResponse(
+            success=True,
+            data=data,
+            days_requested=days,
+            message=f"{len(data)} data points",
+        )
+    except Exception as e:
+        logger.error("history_failed", user_id=user_id, error=str(e))
+        return HistoryResponse(
+            success=False,
+            message=f"Failed to load history: {str(e)}",
+            days_requested=days,
         )
