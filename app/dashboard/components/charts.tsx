@@ -3,6 +3,7 @@
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
+  AreaChart, Area,
 } from "recharts";
 
 interface TrackMetric {
@@ -160,6 +161,95 @@ export function ReleaseDayHeatmap({ dayData, bestDay }: { dayData: DayData[]; be
       <p className="text-[10px] text-muted text-center">
         Number = tracks released · Color intensity = avg engagement
       </p>
+    </div>
+  );
+}
+
+// --- Plays Over Time Area Chart ---
+
+interface HistoryPoint {
+  day: string;
+  total_plays: number;
+  total_likes: number;
+  track_count: number;
+}
+
+export function PlaysOverTimeChart({ data }: { data: HistoryPoint[] }) {
+  if (data.length === 0) return null;
+
+  const formatted = data.map((d) => ({
+    ...d,
+    label: new Date(d.day).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  }));
+
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4 sm:p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Plays Over Time</h3>
+        <span className="text-[10px] text-muted">{data.length} days</span>
+      </div>
+      <div className="w-full h-[240px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={formatted} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
+            <defs>
+              <linearGradient id="playsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={ACCENT} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="likesGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="label"
+              tick={{ fill: MUTED, fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fill: MUTED, fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              width={50}
+              tickFormatter={(v: any) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`}
+            />
+            <Tooltip
+              contentStyle={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: "#ededed" }}
+              formatter={(v: any, name: any) => [
+                typeof v === "number" ? v.toLocaleString() : v,
+                name === "total_plays" ? "Plays" : name === "total_likes" ? "Likes" : name,
+              ]}
+            />
+            <Area
+              type="monotone"
+              dataKey="total_plays"
+              stroke={ACCENT}
+              strokeWidth={2}
+              fill="url(#playsGradient)"
+            />
+            <Area
+              type="monotone"
+              dataKey="total_likes"
+              stroke="#3b82f6"
+              strokeWidth={1.5}
+              fill="url(#likesGradient)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex gap-4 justify-center">
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <span className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
+          Plays
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          <span className="w-2 h-2 rounded-full" style={{ background: "#3b82f6" }} />
+          Likes
+        </div>
+      </div>
     </div>
   );
 }

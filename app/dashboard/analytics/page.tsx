@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "../components/nav";
-import { EngagementBarChart, ReleaseDayHeatmap } from "../components/charts";
+import { EngagementBarChart, ReleaseDayHeatmap, PlaysOverTimeChart } from "../components/charts";
 import { CountUp } from "../components/count-up";
 
 interface TrackMetric {
@@ -126,6 +126,15 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
   const concentration = metrics?.catalog_concentration || 0;
   const topTrackCount = Math.max(1, Math.ceil(allTracks.length * 0.2));
 
+  const [historyData, setHistoryData] = useState<{ day: string; total_plays: number; total_likes: number; track_count: number }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/analytics/history")
+      .then((res) => res.ok ? res.json() : null)
+      .then((json) => { if (json?.success && json.data) setHistoryData(json.data); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Pipeline info */}
@@ -232,6 +241,11 @@ function AnalyticsContent({ report, processingMs }: { report: NonNullable<Analyt
           <div className="flex items-center gap-2"><span className="text-lg">🔥</span><h3 className="text-sm font-semibold">Your Strongest Era</h3></div>
           <p className="text-sm text-muted">{trends.strongest_era_description}</p>
         </div>
+      )}
+
+      {/* Plays Over Time */}
+      {historyData.length > 0 && (
+        <PlaysOverTimeChart data={historyData} />
       )}
 
       {/* Charts */}
