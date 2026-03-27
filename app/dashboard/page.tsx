@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "./components/nav";
-import { CountUp } from "./components/count-up";
+import { StatCard } from "./components/stat-card";
 import { Onboarding } from "./components/onboarding";
 
 interface UserData {
@@ -111,10 +111,10 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
-          <StatCard label="Tracks" value={user.track_count} />
-          <StatCard label="Followers" value={user.followers_count} />
-          <StatCard label="Following" value={user.following_count} />
-          <StatCard label="Likes" value={user.likes_count} />
+          <StatCard label="Tracks" value={user.track_count ?? 0} />
+          <StatCard label="Followers" value={user.followers_count ?? 0} />
+          <StatCard label="Following" value={user.following_count ?? 0} />
+          <StatCard label="Likes" value={user.likes_count ?? 0} />
         </div>
 
         <a
@@ -147,17 +147,6 @@ export default function Dashboard() {
       )}
 
       <BottomNav />
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value?: number }) {
-  return (
-    <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 space-y-1 card-lift">
-      <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wide">{label}</p>
-      <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">
-        {value !== undefined ? <CountUp end={value} /> : "—"}
-      </p>
     </div>
   );
 }
