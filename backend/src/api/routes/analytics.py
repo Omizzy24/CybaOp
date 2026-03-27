@@ -1,36 +1,83 @@
 """Analytics routes — the core product endpoints."""
 
+import json
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.agent.graph import build_analytics_graph
 from src.api.auth import get_current_user
 from src.db.queries import get_user_token, update_last_analytics
+from src.shared.config import get_settings
 from src.shared.logging import bind_correlation_id, get_logger
 from src.shared.models import AnalyticsResponse
 
 logger = get_logger("routes.analytics")
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
+# In-memory cache: user_id → (timestamp, response_json)
+_cache: dict[str, tuple[float, dict]] = {}
+
+
+def _get_cached(user_id: str, ttl: int) -> dict | None:
+    """Return cached response if fresh, else None."""
+    entry = _cache.get(user_id)
+    if not entry:
+        return None
+    cached_at, data = entry
+    if time.time() - cached_at > ttl:
+        del _cache[user_id]
+        return None
+    return data
+
+
+def _set_cache(user_id: str, data: dict) -> None:
+    """Cache a response. Evict oldest if cache grows too large."""
+    if len(_cache) > 500:
+        oldest_key = min(_cache, key=lambda k: _cache[k][0])
+        del _cache[oldest_key]
+    _cache[user_id] = (time.time(), data)
+
 
 @router.get("/insights", response_model=AnalyticsResponse)
-async def get_insights(user: dict = Depends(get_current_user)):
-    """Run the full analytics pipeline for the authenticated user."""
+async def get_insights(
+    user: dict = Depends(get_current_user),
+    force_refresh: bool = Query(False),
+):
+    """Run the full analytics pipeline for the authenticated user.
+
+    Results are cached for cache_ttl_tracks seconds (default 30 min).
+    Pass ?force_refresh=true to bypass cache.
+    """
     correlation_id = str(uuid.uuid4())
     bind_correlation_id(correlation_id)
     start = time.time()
 
     user_id = user["sub"]
     tier = user.get("tier", "free")
+    settings = get_settings()
 
     logger.info("analytics_request", user_id=user_id, tier=tier)
+
+    # Check cache first (unless force_refresh)
+    if not force_refresh:
+        cached = _get_cached(user_id, settings.cache_ttl_tracks)
+        if cached:
+            elapsed = int((time.time() - start) * 1000)
+            logger.info("analytics_cache_hit", user_id=user_id, elapsed_ms=elapsed)
+            cached["request_id"] = correlation_id
+            cached["processing_time_ms"] = elapsed
+            cached["message"] = "Analytics loaded from cache"
+            return AnalyticsResponse(**cached)
 
     # Get SoundCloud token from DB
     token = await get_user_token(user_id)
     if not token:
-        raise HTTPException(status_code=401, detail="SoundCloud token not found — re-authenticate")
+        raise HTTPException(
+            status_code=401,
+            detail="SoundCloud token not found — re-authenticate",
+        )
 
     # Build and run the analytics graph
     try:
@@ -60,6 +107,17 @@ async def get_insights(user: dict = Depends(get_current_user)):
 
         await update_last_analytics(user_id)
 
+        response = AnalyticsResponse(
+            request_id=correlation_id,
+            success=True,
+            message="Analytics generated successfully",
+            report=report,
+            processing_time_ms=elapsed,
+        )
+
+        # Cache the result
+        _set_cache(user_id, response.model_dump())
+
         logger.info(
             "analytics_complete",
             user_id=user_id,
@@ -67,13 +125,7 @@ async def get_insights(user: dict = Depends(get_current_user)):
             nodes=result.get("nodes_executed", []),
         )
 
-        return AnalyticsResponse(
-            request_id=correlation_id,
-            success=True,
-            message="Analytics generated successfully",
-            report=report,
-            processing_time_ms=elapsed,
-        )
+        return response
 
     except Exception as e:
         elapsed = int((time.time() - start) * 1000)
