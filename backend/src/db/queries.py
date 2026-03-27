@@ -97,7 +97,12 @@ async def save_track_snapshots(
             """INSERT INTO track_snapshots
                (user_id, track_id, title, play_count,
                 like_count, comment_count, repost_count)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+               SELECT $1, $2, $3, $4, $5, $6, $7
+               WHERE NOT EXISTS (
+                   SELECT 1 FROM track_snapshots
+                   WHERE user_id = $1 AND track_id = $2
+                   AND captured_at >= date_trunc('day', NOW())
+               )""",
             records,
         )
         logger.info("snapshots_saved", user_id=user_id, count=len(records))

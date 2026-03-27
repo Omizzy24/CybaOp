@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.agent.graph import build_analytics_graph
 from src.api.auth import get_current_user
-from src.db.queries import get_user_token, update_last_analytics
+from src.db.queries import get_user_token, update_last_analytics, save_track_snapshots, get_all_track_history
 from src.shared.config import get_settings
 from src.shared.logging import bind_correlation_id, get_logger
 from src.shared.models import AnalyticsResponse
@@ -82,6 +82,13 @@ async def get_insights(
     # Build and run the analytics graph
     try:
         graph = build_analytics_graph()
+
+        # Load historical snapshots for trend detection
+        try:
+            snapshots = await get_all_track_history(user_id)
+        except Exception:
+            snapshots = []
+
         initial_state = {
             "user_id": user_id,
             "soundcloud_token": token,
@@ -95,7 +102,7 @@ async def get_insights(
             "final_report": None,
             "nodes_executed": [],
             "error": None,
-            "snapshots": [],
+            "snapshots": snapshots,
         }
 
         result = await graph.ainvoke(initial_state)
@@ -104,6 +111,25 @@ async def get_insights(
         report = result.get("final_report")
         if report:
             report.processing_time_ms = elapsed
+
+        # Persist track snapshots for trend detection (non-fatal)
+        tracks_data = result.get("tracks_data") or []
+        if tracks_data:
+            try:
+                snapshot_records = [
+                    {
+                        "track_id": t.platform_track_id,
+                        "title": t.title,
+                        "play_count": t.play_count,
+                        "like_count": t.like_count,
+                        "comment_count": t.comment_count,
+                        "repost_count": t.repost_count,
+                    }
+                    for t in tracks_data
+                ]
+                await save_track_snapshots(user_id, snapshot_records)
+            except Exception as e:
+                logger.warning("snapshot_save_failed", user_id=user_id, error=str(e))
 
         await update_last_analytics(user_id)
 
