@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "../components/nav";
 import { EngagementBarChart, ReleaseDayHeatmap } from "../components/charts";
+import { CountUp } from "../components/count-up";
 
 interface TrackMetric {
   track_id: string;
@@ -244,11 +245,22 @@ function ProTeaser({ icon, title, description }: { icon: string; title: string; 
 }
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
-  const display = typeof value === "number" ? value.toLocaleString() : value;
+  const isNumber = typeof value === "number";
+  const isPercent = typeof value === "string" && value.endsWith("%");
+  const numericValue = isPercent ? parseFloat(value) : isNumber ? value : 0;
+
   return (
     <div className="rounded-lg border border-border bg-surface p-3 sm:p-4 space-y-1">
       <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wide">{label}</p>
-      <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">{display}</p>
+      <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">
+        {isNumber ? (
+          <CountUp end={value as number} />
+        ) : isPercent ? (
+          <CountUp end={numericValue} decimals={1} suffix="%" />
+        ) : (
+          value
+        )}
+      </p>
     </div>
   );
 }

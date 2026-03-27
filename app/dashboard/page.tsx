@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopNav, BottomNav } from "./components/nav";
+import { CountUp } from "./components/count-up";
 
 interface UserData {
   username?: string;
@@ -129,7 +130,7 @@ function StatCard({ label, value }: { label: string; value?: number }) {
     <div className="rounded-lg border border-border bg-surface p-3 sm:p-4 space-y-1">
       <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wide">{label}</p>
       <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">
-        {value !== undefined ? value.toLocaleString() : "—"}
+        {value !== undefined ? <CountUp end={value} /> : "—"}
       </p>
     </div>
   );
