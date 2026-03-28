@@ -128,6 +128,16 @@ export default function Dashboard() {
         </a>
 
         <a
+          href="/dashboard/triage"
+          className="block rounded-xl border border-rose/20 bg-rose-dim hover:bg-rose/[0.08] p-5 sm:p-6 text-center space-y-2 card-lift"
+        >
+          <p className="text-sm font-medium font-mono">🚨 Catalog Triage</p>
+          <p className="text-xs text-muted font-mono">
+            Production health monitoring — incidents, decay detection, remediation
+          </p>
+        </a>
+
+        <a
           href="/dashboard/share"
           className="block rounded-xl border border-sky/20 bg-sky-dim hover:bg-sky/[0.08] p-5 sm:p-6 text-center space-y-2 card-lift"
         >
