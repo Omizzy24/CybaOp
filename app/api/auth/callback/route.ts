@@ -29,10 +29,7 @@ export async function GET(req: NextRequest) {
   try {
     const code = req.nextUrl.searchParams.get("code");
     if (!code) {
-      return NextResponse.json(
-        { error: "Missing authorization code" },
-        { status: 400 }
-      );
+      return NextResponse.redirect(`${baseUrl}/?error=exchange_failed`);
     }
 
     const redirectUri = process.env.SOUNDCLOUD_REDIRECT_URI!;
