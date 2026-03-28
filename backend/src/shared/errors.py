@@ -82,3 +82,9 @@ class WorkflowConcurrencyError(WorkflowError):
 class WorkflowStateError(WorkflowError):
     def __init__(self, message: str):
         super().__init__(message, "WORKFLOW_STATE_ERROR")
+
+
+class StripeError(CybaOpError):
+    """Stripe API call failed."""
+    def __init__(self, message: str):
+        super().__init__(message, "STRIPE_ERROR")

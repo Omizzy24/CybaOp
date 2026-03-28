@@ -283,3 +283,22 @@ class HealthScorePoint(BaseModel):
 class HealthScoreHistoryResponse(BaseModel):
     history: list[HealthScorePoint]
     current_score: int | None = None
+
+
+# --- Billing Response Models ---
+
+class BillingStatusResponse(BaseModel):
+    tier: str
+    is_pro: bool
+    features: dict[str, bool]
+    subscription_status: str | None = None
+    subscription_ends_at: str | None = None
+    warning: str | None = None
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
+class PortalResponse(BaseModel):
+    url: str

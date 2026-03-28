@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await backendFetch({
-      path: "/billing/checkout",
+      path: "/billing/portal",
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -19,6 +19,6 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch {
-    return NextResponse.json({ success: false, message: "Checkout service unavailable" }, { status: 502 });
+    return NextResponse.json({ success: false, message: "Portal service unavailable" }, { status: 502 });
   }
 }

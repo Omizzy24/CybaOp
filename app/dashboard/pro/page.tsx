@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopNav, BottomNav } from "../components/nav";
 
 interface BillingStatus {
   tier: string;
   is_pro: boolean;
   features: Record<string, boolean>;
+  subscription_status: string | null;
+  subscription_ends_at: string | null;
+  warning: string | null;
 }
 
 const PRO_FEATURES = [
@@ -20,11 +23,14 @@ const PRO_FEATURES = [
   { icon: "⚡", name: "Priority Refresh", desc: "Your analytics pipeline runs first. No waiting behind the queue during peak hours." },
 ];
 
-export default function ProPage() {
+function ProPageContent() {
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
+  const [managing, setManaging] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
 
   useEffect(() => {
     fetch("/api/billing/status")
@@ -36,16 +42,31 @@ export default function ProPage() {
   async function handleUpgrade() {
     setUpgrading(true);
     try {
-      const res = await fetch("/api/billing/upgrade", { method: "POST" });
+      const res = await fetch("/api/billing/checkout", { method: "POST" });
       const data = await res.json();
-      if (data.success) {
-        setStatus({ tier: "pro", is_pro: true, features: data.features });
+      if (data.url) {
+        window.location.href = data.url;
+        return;
       }
     } catch {}
     setUpgrading(false);
   }
 
+  async function handleManage() {
+    setManaging(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+    } catch {}
+    setManaging(false);
+  }
+
   const isPro = status?.is_pro || false;
+  const subscriptionStatus = status?.subscription_status;
 
   return (
     <div className="min-h-screen pb-20 md:pb-0">
@@ -74,7 +95,29 @@ export default function ProPage() {
           </p>
         </div>
 
-        {/* Pricing card */}
+        {/* Success banner after Stripe checkout return */}
+        {sessionId && (
+          <div className="rounded-xl border border-lime/30 bg-lime-dim p-4 text-center space-y-1 animate-fade-in">
+            <p className="text-sm font-semibold text-lime">🎉 Payment successful!</p>
+            <p className="text-xs text-muted">Your Pro access is being activated. It may take a moment to reflect.</p>
+          </div>
+        )}
+
+        {/* Past due warning banner */}
+        {isPro && subscriptionStatus === "past_due" && status?.warning && (
+          <div className="rounded-xl border border-amber/30 bg-amber-dim p-4 text-center space-y-2 animate-fade-in">
+            <p className="text-sm font-semibold text-amber">⚠️ {status.warning}</p>
+            <button
+              onClick={handleManage}
+              disabled={managing}
+              className="px-4 py-2 bg-amber hover:brightness-110 text-black font-semibold rounded-xl text-sm disabled:opacity-50"
+            >
+              {managing ? "Loading..." : "Update Payment"}
+            </button>
+          </div>
+        )}
+
+        {/* Pricing card — show when not pro */}
         {!isPro && !loading && (
           <div className="rounded-2xl border border-violet/30 bg-violet-dim p-6 sm:p-8 text-center space-y-4 card-lift">
             <div className="space-y-1">
@@ -86,13 +129,34 @@ export default function ProPage() {
               disabled={upgrading}
               className="w-full py-3 bg-violet hover:brightness-110 text-white font-semibold rounded-xl text-sm disabled:opacity-50"
             >
-              {upgrading ? "Upgrading..." : "Upgrade to Pro"}
+              {upgrading ? "Redirecting to checkout..." : "Upgrade to Pro"}
             </button>
             <p className="text-[10px] text-muted">Beta pricing — locked in for early adopters</p>
           </div>
         )}
 
-        {isPro && (
+        {/* Active subscription card */}
+        {isPro && subscriptionStatus === "active" && (
+          <div className="rounded-2xl border border-lime/30 bg-lime-dim p-6 text-center space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime/10 border border-lime/30 text-xs text-lime">
+              ● Active subscription
+            </div>
+            <p className="text-xs text-muted">All features unlocked. Your next analytics run will include AI insights.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
+              <a href="/dashboard/analytics" className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm">Run Analytics →</a>
+              <button
+                onClick={handleManage}
+                disabled={managing}
+                className="px-4 py-2 border border-border hover:bg-surface-hover text-foreground rounded-xl text-sm disabled:opacity-50"
+              >
+                {managing ? "Loading..." : "Manage Subscription"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pro card for past_due or other pro states (not active) */}
+        {isPro && subscriptionStatus !== "active" && subscriptionStatus !== "past_due" && (
           <div className="rounded-2xl border border-lime/30 bg-lime-dim p-6 text-center space-y-2">
             <p className="text-lg font-semibold text-lime">You&apos;re on Pro</p>
             <p className="text-xs text-muted">All features unlocked. Your next analytics run will include AI insights.</p>
@@ -152,5 +216,13 @@ export default function ProPage() {
       </div>
       <BottomNav />
     </div>
+  );
+}
+
+export default function ProPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Loading...</div>}>
+      <ProPageContent />
+    </Suspense>
   );
 }

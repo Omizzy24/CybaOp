@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_analytics_at TIMESTAMPTZ,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    subscription_status TEXT,
+    subscription_ends_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_sc_id
@@ -103,6 +107,20 @@ CREATE INDEX IF NOT EXISTS idx_remediation_session
 """
 
 
+SCHEMA_SQL_BILLING = """
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_users_stripe_customer
+    ON users(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription
+    ON users(stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL;
+"""
+
+
 async def initialize_schema() -> None:
     """Create tables if they don't exist."""
     pool = await get_pool()
@@ -110,4 +128,5 @@ async def initialize_schema() -> None:
         await conn.execute(SCHEMA_SQL)
         await conn.execute(SCHEMA_SQL_PART2)
         await conn.execute(SCHEMA_SQL_WORKFLOWS)
+        await conn.execute(SCHEMA_SQL_BILLING)
     logger.info("schema_initialized")

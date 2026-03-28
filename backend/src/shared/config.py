@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     log_level: str = "debug"
     rate_limit_per_minute: int = 30
 
+    # Stripe (optional — app starts without them)
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_price_id: str = ""
+
     # Cache TTLs (seconds)
     cache_ttl_profile: int = 3600      # 1 hour
     cache_ttl_tracks: int = 1800       # 30 minutes

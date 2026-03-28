@@ -11,7 +11,21 @@ export async function GET(req: NextRequest) {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const response = NextResponse.json(data, { status: res.status });
+
+    // If backend detected a tier mismatch, update the cookie with refreshed JWT
+    const refreshedToken = res.headers.get("x-refreshed-token");
+    if (refreshedToken) {
+      response.cookies.set("cybaop_token", refreshedToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+
+    return response;
   } catch {
     return NextResponse.json({ error: "Billing service unavailable" }, { status: 502 });
   }

@@ -175,3 +175,70 @@ async def upgrade_user_tier(user_id: str, tier: str) -> None:
             tier, user_id,
         )
     logger.info("tier_upgraded", user_id=user_id, tier=tier)
+
+
+async def get_user_by_stripe_customer(customer_id: str) -> dict[str, Any] | None:
+    """Find user by stripe_customer_id."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE stripe_customer_id = $1", customer_id
+        )
+        return dict(row) if row else None
+
+
+async def get_user_by_stripe_subscription(subscription_id: str) -> dict[str, Any] | None:
+    """Find user by stripe_subscription_id."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE stripe_subscription_id = $1", subscription_id
+        )
+        return dict(row) if row else None
+
+
+async def update_user_stripe_info(
+    user_id: str,
+    stripe_customer_id: str | None = None,
+    stripe_subscription_id: str | None = None,
+    subscription_status: str | None = None,
+    subscription_ends_at: datetime | None = None,
+    tier: str | None = None,
+) -> None:
+    """Update Stripe-related fields on the user record. Only updates provided fields."""
+    fields = []
+    values = []
+    idx = 1
+
+    if stripe_customer_id is not None:
+        fields.append(f"stripe_customer_id = ${idx}")
+        values.append(stripe_customer_id)
+        idx += 1
+    if stripe_subscription_id is not None:
+        fields.append(f"stripe_subscription_id = ${idx}")
+        values.append(stripe_subscription_id)
+        idx += 1
+    if subscription_status is not None:
+        fields.append(f"subscription_status = ${idx}")
+        values.append(subscription_status)
+        idx += 1
+    if subscription_ends_at is not None:
+        fields.append(f"subscription_ends_at = ${idx}")
+        values.append(subscription_ends_at)
+        idx += 1
+    if tier is not None:
+        fields.append(f"tier = ${idx}")
+        values.append(tier)
+        idx += 1
+
+    if not fields:
+        return
+
+    fields.append("updated_at = NOW()")
+    values.append(user_id)
+
+    query = f"UPDATE users SET {', '.join(fields)} WHERE id = ${idx}"
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(query, *values)
+    logger.info("user_stripe_info_updated", user_id=user_id)
