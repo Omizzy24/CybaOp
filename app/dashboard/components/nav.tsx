@@ -15,6 +15,7 @@ const tabs = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/dashboard/triage", label: "Triage", icon: "🚨" },
   { href: "/dashboard/analytics", label: "Analytics", icon: "📈" },
+  { href: "/dashboard/workflows", label: "Workflows", icon: "⚙️" },
   { href: "/dashboard/pro", label: "Pro", icon: "⚡" },
 ];
 

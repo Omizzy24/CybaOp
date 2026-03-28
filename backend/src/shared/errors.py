@@ -61,3 +61,24 @@ class DatabaseError(CybaOpError):
 class LLMError(CybaOpError):
     def __init__(self, message: str):
         super().__init__(message, "LLM_ERROR")
+
+
+class WorkflowError(CybaOpError):
+    """Base for workflow-specific errors."""
+    def __init__(self, message: str, error_code: str = "WORKFLOW_ERROR"):
+        super().__init__(message, error_code)
+
+
+class WorkflowNotFoundError(WorkflowError):
+    def __init__(self, session_id: str):
+        super().__init__(f"Workflow session not found: {session_id}", "WORKFLOW_NOT_FOUND")
+
+
+class WorkflowConcurrencyError(WorkflowError):
+    def __init__(self, session_id: str):
+        super().__init__(f"Concurrent execution on session: {session_id}", "WORKFLOW_CONCURRENCY")
+
+
+class WorkflowStateError(WorkflowError):
+    def __init__(self, message: str):
+        super().__init__(message, "WORKFLOW_STATE_ERROR")

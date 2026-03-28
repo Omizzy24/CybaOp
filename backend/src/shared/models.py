@@ -207,3 +207,79 @@ class HistoryResponse(BaseModel):
     data: list[HistoryDataPoint] = []
     days_requested: int = 90
     message: str = ""
+
+
+# --- Workflow Enums ---
+
+class WorkflowStatus(str, Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class StepStatus(str, Enum):
+    PENDING = "pending"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class RemediationOutcome(str, Enum):
+    RESOLVED = "resolved"
+    PARTIALLY_RESOLVED = "partially_resolved"
+    UNRESOLVED = "unresolved"
+
+
+# --- Workflow Request Models ---
+
+class CreateWorkflowRequest(BaseModel):
+    workflow_type: str
+    params: dict = {}
+
+
+class AdvanceRequest(BaseModel):
+    user_input: dict = {}
+
+
+# --- Workflow Response Models ---
+
+class WorkflowStepResponse(BaseModel):
+    step_name: str
+    label: str
+    status: StepStatus
+    output: dict | None = None
+    skippable: bool = False
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class WorkflowSessionResponse(BaseModel):
+    id: str
+    workflow_type: str
+    status: WorkflowStatus
+    current_step: str | None
+    steps: list[WorkflowStepResponse]
+    context: dict
+    health_score: int | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+
+
+class WorkflowListResponse(BaseModel):
+    sessions: list[WorkflowSessionResponse]
+    total: int
+
+
+class HealthScorePoint(BaseModel):
+    score: int
+    components: dict
+    computed_at: datetime
+    explanation: str | None = None
+
+
+class HealthScoreHistoryResponse(BaseModel):
+    history: list[HealthScorePoint]
+    current_score: int | None = None

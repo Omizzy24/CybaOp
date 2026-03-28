@@ -87,3 +87,49 @@ export interface HistoryPoint {
   total_likes: number;
   track_count: number;
 }
+
+// --- Workflow Types ---
+
+export type WorkflowStatus = "active" | "paused" | "completed" | "failed";
+export type StepStatus = "pending" | "active" | "completed" | "failed" | "skipped";
+export type RemediationOutcomeType = "resolved" | "partially_resolved" | "unresolved";
+
+export interface WorkflowStep {
+  step_name: string;
+  label: string;
+  status: StepStatus;
+  output: Record<string, unknown> | null;
+  skippable: boolean;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface WorkflowSession {
+  id: string;
+  workflow_type: string;
+  status: WorkflowStatus;
+  current_step: string | null;
+  steps: WorkflowStep[];
+  context: Record<string, unknown>;
+  health_score: number | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface WorkflowListData {
+  sessions: WorkflowSession[];
+  total: number;
+}
+
+export interface HealthScorePoint {
+  score: number;
+  components: Record<string, number | null>;
+  computed_at: string;
+  explanation: string | null;
+}
+
+export interface HealthScoreHistory {
+  history: HealthScorePoint[];
+  current_score: number | null;
+}
