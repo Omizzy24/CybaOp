@@ -164,3 +164,14 @@ async def get_plays_over_time(
             user_id, days,
         )
         return [dict(r) for r in rows]
+
+
+async def upgrade_user_tier(user_id: str, tier: str) -> None:
+    """Update a user's subscription tier."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET tier = $1, updated_at = NOW() WHERE id = $2",
+            tier, user_id,
+        )
+    logger.info("tier_upgraded", user_id=user_id, tier=tier)

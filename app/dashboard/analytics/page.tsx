@@ -9,7 +9,9 @@ import { StreakBadge } from "../components/streak";
 import { InsightCard } from "../components/insight-card";
 import { ProTeaser } from "../components/pro-teaser";
 import { TrackTable } from "../components/track-table";
-import type { AnalyticsData, Report, HistoryPoint } from "../types";
+import { AIInsights } from "../components/ai-insights";
+import { GrowthVelocity } from "../components/growth-velocity";
+import type { AnalyticsData, Report, HistoryPoint, Insight } from "../types";
 
 export default function Analytics() {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -72,6 +74,7 @@ function AnalyticsContent({ report, processingMs }: { report: Report; processing
   const allTracks = metrics?.all_track_metrics || report.top_tracks || [];
   const concentration = metrics?.catalog_concentration || 0;
   const topN = Math.max(1, Math.ceil(allTracks.length * 0.2));
+  const isPro = report.tier === "pro" || report.tier === "enterprise";
 
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   useEffect(() => {
@@ -108,6 +111,21 @@ function AnalyticsContent({ report, processingMs }: { report: Report; processing
         </InsightCard>
       </div>
 
+      {/* Pro: AI Insights */}
+      {isPro && report.insights.length > 0 && <AIInsights insights={report.insights as Insight[]} />}
+
+      {/* Pro: Growth Velocity */}
+      {isPro && trends && <GrowthVelocity trends={trends} />}
+
+      {/* Free tier: Pro upsell */}
+      {!isPro && (
+        <a href="/dashboard/pro" className="block rounded-xl border border-violet/20 bg-violet-dim p-4 sm:p-5 text-center space-y-2 card-lift">
+          <p className="text-sm font-semibold">🧠 Unlock AI Insights & Growth Tracking</p>
+          <p className="text-xs text-muted">Upgrade to Pro for personalized strategy recommendations powered by Gemini.</p>
+          <span className="inline-block mt-1 text-xs text-violet font-medium">See Pro features →</span>
+        </a>
+      )}
+
       {eras && eras.length > 0 && <EraTimeline eras={eras} fingerprint={era_fingerprint} />}
 
       {era_fingerprint && <EraFingerprint fp={era_fingerprint} />}
@@ -129,14 +147,16 @@ function AnalyticsContent({ report, processingMs }: { report: Report; processing
 
       <TrackTable tracks={allTracks} />
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-muted">Pro Features</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 stagger-children">
-          <ProTeaser icon="📉" title="Engagement Decay" description="See how plays drop off after release." featureId="engagement_decay" />
-          <ProTeaser icon="🤖" title="AI Strategy" description="Personalized release recommendations." featureId="ai_strategy" />
-          <ProTeaser icon="🔍" title="Benchmarking" description="Compare to similar artists." featureId="benchmarking" />
+      {!isPro && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-muted">Pro Features</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 stagger-children">
+            <ProTeaser icon="📉" title="Engagement Decay" description="See how plays drop off after release." featureId="engagement_decay" />
+            <ProTeaser icon="🤖" title="AI Strategy" description="Personalized release recommendations." featureId="ai_strategy" />
+            <ProTeaser icon="🔍" title="Benchmarking" description="Compare to similar artists." featureId="benchmarking" />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ interface NavProps {
 const tabs = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/dashboard/analytics", label: "Analytics", icon: "📈" },
+  { href: "/dashboard/pro", label: "Pro", icon: "⚡" },
 ];
 
 export function TopNav({ user, onLogout }: NavProps) {

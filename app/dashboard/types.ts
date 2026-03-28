@@ -23,6 +23,11 @@ export interface Trends {
   best_release_hour: number | null;
   strongest_era_description: string;
   confidence: number;
+  growth_velocity_7d?: number;
+  growth_velocity_30d?: number;
+  growth_velocity_90d?: number;
+  growth_accelerating?: boolean;
+  anomaly_tracks?: string[];
 }
 
 export interface Era {
@@ -46,13 +51,22 @@ export interface EraFingerprint {
   track_count: number;
 }
 
+export interface Insight {
+  category: string;
+  headline: string;
+  detail: string;
+  confidence: number;
+  actionable: boolean;
+  recommendation: string;
+}
+
 export interface Report {
   user_id: string;
   track_count: number;
   top_tracks: TrackMetric[];
   metrics?: Metrics | null;
   trends?: Trends | null;
-  insights: unknown[];
+  insights: Insight[];
   eras?: Era[];
   era_fingerprint?: EraFingerprint | null;
   tier: string;

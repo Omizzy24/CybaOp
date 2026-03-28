@@ -67,15 +67,25 @@ async def exchange_token(request: AuthTokenRequest):
             raise HTTPException(status_code=503, detail="Database error during user creation")
 
     # 4. Issue JWT — this is the only token the frontend stores
-    jwt_token = create_jwt(user_id=user_id, username=profile.username)
+    # Read tier from DB (may have been upgraded previously)
+    tier = "free"
+    try:
+        from src.db.queries import get_user
+        db_user = await get_user(user_id)
+        if db_user:
+            tier = db_user.get("tier", "free")
+    except Exception:
+        pass
 
-    logger.info("auth_complete", user_id=user_id, username=profile.username)
+    jwt_token = create_jwt(user_id=user_id, username=profile.username, tier=tier)
+
+    logger.info("auth_complete", user_id=user_id, username=profile.username, tier=tier)
 
     return AuthTokenResponse(
         access_token=jwt_token,
         user_id=user_id,
         username=profile.username,
-        tier=Tier.FREE,
+        tier=Tier(tier),
     )
 
 
